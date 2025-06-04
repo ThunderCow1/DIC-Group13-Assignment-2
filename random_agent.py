@@ -29,3 +29,6 @@ class RandomAgent:
                 action_list.append(action)
 
         return action_list
+    
+    def _update(self, reward, old_pos, action_list):
+        pass

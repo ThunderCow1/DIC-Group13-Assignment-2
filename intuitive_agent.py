@@ -21,15 +21,15 @@ class IntuitiveAgent:
     def select_action(self, x, y, robot_orientation,
                       robot_speed, target_x, target_y,
                       angle_diff, distances:  list):
+        
         action_list = []
         
-        
-        if distances[0] <= 10 or distances [1] <= 50:
+        if distances[0] <= 25 or distances [1] <= 50:
             action_list.append('turn_right')
         elif angle_diff <= 0:
             action_list.append('turn_left')
 
-        if distances[4] <= 10 or distances [3] <= 50:
+        if distances[4] <= 25 or distances [3] <= 50:
             action_list.append('turn_left')
         elif angle_diff >= 0:
             action_list.append('turn_right')
@@ -38,12 +38,15 @@ class IntuitiveAgent:
         if distances[2] >= 100:
             action_list.append('accelerate')
         
-        elif distances[2] <= 100:
+        elif distances[2] <= 70:
             action_list.append('break')
 
-        elif distances[2] <= 50:
+        elif distances[2] <= 30:
             action_list.append('break_hard')
-        print(action_list)
+
         return action_list
+    
+    def _update(self, reward, old_pos, action_list):
+        pass
         
 

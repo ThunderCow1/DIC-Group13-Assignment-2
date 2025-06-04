@@ -46,26 +46,30 @@ class Environment:
         self.screen = pygame.display.set_mode(self.map.map_size)
         self.mask_surface = self.obstacle_mask.to_surface(self.screen, setcolor=(200,200,200))
 
-
+        self.cum_reward = 0
 
     def _update(self, agent):
-        temp_mask = self.obstacle_mask.copy()
-        temp_screen = pygame.Surface(self.map.map_size, pygame.SRCALPHA)
+        # Create a temporary mask for this update
+        # temp_mask = self.obstacle_mask.copy()
+        # temp_screen = pygame.Surface(self.map.map_size, pygame.SRCALPHA)
 
-        for npc in self.npcs:
-            npc._draw(temp_screen)
+        # for npc in self.npcs:
+        #     npc._draw(temp_screen)
 
-        temp_mask.draw(pygame.mask.from_surface(temp_screen), offset=(0,0))
+        # temp_mask.draw(pygame.mask.from_surface(temp_screen), offset=(0,0))
 
-        distances = self.robot.gain_sensor_output(temp_mask, get_directions=False)
+        # Get distances from sensors
+        distances = self.robot.gain_sensor_output(self.obstacle_mask, get_directions=False)
         
+        # Get location of self and target
         target_x, target_y = self.map.current_target
         x, y = self.robot.position
 
+        # Compute angle diff for input vector
         direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x,y])
         angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
         angle_diff = (angle_to_target - self.robot.orientation + 540) % 360 - 180
-        
+
         action_list = agent.select_action(x, 
                                           y, 
                                           self.robot.orientation,
@@ -79,14 +83,11 @@ class Environment:
         old_pos = self.robot.position
         new_pos = self.robot._update()
 
-        collision = check_collision(new_pos, self.robot.size, temp_mask)
-
+        collision = check_collision(new_pos, self.robot.size, self.obstacle_mask)
         target_reached = self.check_target(new_pos, self.robot.size)
 
         if target_reached:
             self.map.update_target()
-
-        #reward = self.reward_function(new_pos, old_pos, collision, target_reached)
 
         if collision:
             self.robot.speed = 0
@@ -101,15 +102,31 @@ class Environment:
             else:
                 npc.position = new_pos
 
+        reward = self.reward_function(collision, target_reached)
+
+        self.cum_reward += reward
+
+        agent._update(reward, old_pos, action_list)
+
         if self.draw:
             self._draw()
+
+    def reward_function(self, collision, target_reached):
+        r = 0
+        if not collision and not target_reached:
+            r -= 0.01
+        elif collision:
+            r -= 2.5
+        elif target_reached:
+            r += 10
+        
+        return r
 
     def check_target(self, new_pos, robot_radius):
         dist = np.linalg.norm(np.array(self.map.current_target) - np.array(new_pos))
 
         if dist <= 30.0:
             return True
-
 
     def _draw(self):
         self.screen.fill((255, 255, 255))
@@ -127,12 +144,19 @@ class Environment:
         for npc in self.npcs:
             npc._draw(self.screen)
         #self.robot.display_sensor_values(self.screen, distances, directions, self.screen.get_size())
+
+        pygame.font.init()
+        font = pygame.font.SysFont(None, 24)
+        cum_reward = font.render(f"{round(self.cum_reward,2)}", True, (0,0,0))
+        self.screen.blit(cum_reward, [self.map.map_size[0]-50, 10])
+
         pygame.display.flip()
         
 if __name__ == "__main__":
     pygame.init()
     env = Environment("map1.json", agent_start_pos = (50,50), draw = True)
     # env.npcs.append(NPC((700,500),3,15,0.01))
+    fpss = []
     typerun = True
 
     agent = IntuitiveAgent(env.robot)
@@ -141,9 +165,11 @@ if __name__ == "__main__":
     while typerun == True:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
+                print(np.mean(fpss))
                 typerun = False
         
         env._update(agent=agent)
         
         clock.tick()
+        fpss.append(clock.get_fps())
 

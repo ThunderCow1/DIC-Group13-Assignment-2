@@ -16,8 +16,9 @@ class Robot:
                  position: tuple[float, float] = None,
                  orientation: float = 0,
                  speed: float = 0,
-                 top_speed = 5,
+                 top_speed = 10,
                  acceleration=0.1,
+                 turn_speed = 3,
                  size = 15):
         
         self.position = position
@@ -25,6 +26,7 @@ class Robot:
         self.speed = speed
         self.acceleration = acceleration
         self.top_speed = top_speed
+        self.turn_speed = turn_speed
         self.size = size
 
         self.actions = ['turn_right',
@@ -38,9 +40,9 @@ class Robot:
         for action in actions:
             match action:
                 case 'turn_right':
-                    self.orientation += 1
+                    self.orientation += self.turn_speed
                 case 'turn_left':
-                    self.orientation -= 1
+                    self.orientation -= self.turn_speed
                 case 'accelerate':
                     self.speed += self.acceleration*(self.top_speed - self.speed)
                 case 'break':

@@ -1,5 +1,6 @@
 import random
 import datetime
+import math
 import pygame
 import numpy as np
 from collections import defaultdict
@@ -13,6 +14,8 @@ from robot import Robot
 from random_agent import RandomAgent
 from human_agent import HumanAgent
 from intuitive_agent import IntuitiveAgent
+from helper_functions import check_collision
+from npc import NPC
 
 class Environment:
     def __init__(self,
@@ -38,6 +41,7 @@ class Environment:
             self.agent_pos = agent_start_pos
 
         self.robot = Robot(self.agent_pos)
+        self.npcs = []
 
         self.screen = pygame.display.set_mode(self.map.map_size)
         self.mask_surface = self.obstacle_mask.to_surface(self.screen, setcolor=(200,200,200))
@@ -45,19 +49,37 @@ class Environment:
 
 
     def _update(self, agent):
-        distances = self.robot.gain_sensor_output(self.obstacle_mask, get_directions=False)
+        temp_mask = self.obstacle_mask.copy()
+        temp_screen = pygame.Surface(self.map.map_size, pygame.SRCALPHA)
 
-        action_list = agent.select_action(self.robot.position[0], 
-                                          self.robot.position[1], 
-                                          self.map.current_target[0], 
-                                          self.map.current_target[1],
+        for npc in self.npcs:
+            npc._draw(temp_screen)
+
+        temp_mask.draw(pygame.mask.from_surface(temp_screen), offset=(0,0))
+
+        distances = self.robot.gain_sensor_output(temp_mask, get_directions=False)
+        
+        target_x, target_y = self.map.current_target
+        x, y = self.robot.position
+
+        direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x,y])
+        angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
+        angle_diff = (angle_to_target - self.robot.orientation + 540) % 360 - 180
+        
+        action_list = agent.select_action(x, 
+                                          y, 
+                                          self.robot.orientation,
+                                          self.robot.speed,
+                                          target_x, 
+                                          target_y,
+                                          angle_diff,
                                           distances)
 
         self.robot.take_action(action_list)
         old_pos = self.robot.position
         new_pos = self.robot._update()
 
-        collision = self.check_collision(new_pos, self.robot.size, self.obstacle_mask)
+        collision = check_collision(new_pos, self.robot.size, temp_mask)
 
         target_reached = self.check_target(new_pos, self.robot.size)
 
@@ -71,6 +93,14 @@ class Environment:
         else:
             self.robot.position = new_pos
 
+        for npc in self.npcs:
+            new_pos = npc._update()
+            collision = check_collision(new_pos, npc.size, self.obstacle_mask)
+            if collision:
+                npc.orientation = None
+            else:
+                npc.position = new_pos
+
         if self.draw:
             self._draw()
 
@@ -79,28 +109,6 @@ class Environment:
 
         if dist <= 30.0:
             return True
-
-    def check_collision(self, new_pos, robot_radius, object_mask):
-        diameter = robot_radius * 2
-        robot_surf = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        pygame.draw.circle(robot_surf, (255, 255, 255), (robot_radius, robot_radius), robot_radius)
-
-        robot_mask = pygame.mask.from_surface(robot_surf)
-
-        top_left = (int(new_pos[0] - robot_radius), int(new_pos[1] - robot_radius))
-        top_left_x = top_left[0]
-        top_left_y = top_left[1]
-
-
-        mask_width, mask_height = object_mask.get_size()
-        if (top_left_x < 0 or top_left_y < 0 or
-        top_left_x + diameter > mask_width or
-        top_left_y + diameter > mask_height):
-            return True  # robot would be partially outside the environment
-        
-        offset = top_left
-
-        return object_mask.overlap(robot_mask, offset) is not None
 
 
     def _draw(self):
@@ -112,17 +120,19 @@ class Environment:
         if len(self.map.targets) > 0:
             pygame.draw.circle(self.screen, (0,255,0), self.map.current_target, 15)
 
-        x, y = map(int, self.robot.position)
-
         distances, directions = self.robot.gain_sensor_output(self.obstacle_mask, get_directions=True)
         self.robot.draw_sensors(self.screen, distances, directions, self.screen.get_size())
         self.robot._draw(self.screen)
+
+        for npc in self.npcs:
+            npc._draw(self.screen)
         #self.robot.display_sensor_values(self.screen, distances, directions, self.screen.get_size())
         pygame.display.flip()
         
 if __name__ == "__main__":
     pygame.init()
     env = Environment("map1.json", agent_start_pos = (50,50), draw = True)
+    # env.npcs.append(NPC((700,500),3,15,0.01))
     typerun = True
 
     agent = IntuitiveAgent(env.robot)

@@ -34,6 +34,7 @@ class Robot:
                         'break_hard']
         
     def take_action(self, actions):
+
         for action in actions:
             match action:
                 case 'turn_right':

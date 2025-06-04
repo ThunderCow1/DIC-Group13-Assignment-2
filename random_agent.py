@@ -18,8 +18,12 @@ class RandomAgent:
         self.robot = robot
         self.actions = robot.actions
 
-    def select_action(self, environment):
+    def select_action(self, x, y, robot_orientation,
+                      robot_speed, target_x, target_y,
+                      angle_diff, distances:  list):
+        
         action_list = []
+
         for action in self.actions:
             if random.random() > 0.5:
                 action_list.append(action)

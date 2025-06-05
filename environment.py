@@ -154,7 +154,7 @@ class Environment:
         
 if __name__ == "__main__":
     pygame.init()
-    env = Environment("map1.json", agent_start_pos = (50,50), draw = True)
+    env = Environment("map2.json", agent_start_pos = (50,50), draw = True)
     # env.npcs.append(NPC((700,500),3,15,0.01))
     fpss = []
     typerun = True

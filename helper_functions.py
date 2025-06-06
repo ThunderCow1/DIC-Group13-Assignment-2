@@ -22,3 +22,23 @@ def check_collision(new_pos, robot_radius, object_mask):
     offset = top_left
 
     return object_mask.overlap(robot_mask, offset) is not None
+
+def action_to_index(action):
+    action_map = {
+        "turn_right": 0,
+        "turn_left": 1,
+        "accelerate": 2,
+        "break": 3,
+        "break_hard": 4
+    }
+    return action_map.get(action, -1)
+
+def index_to_action(index):
+    action_map = {
+        0: "turn_right",
+        1: "turn_left",
+        2: "accelerate",
+        3: "break",
+        4: "break_hard"
+    }
+    return action_map.get(index, None)

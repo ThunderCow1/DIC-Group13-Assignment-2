@@ -127,6 +127,8 @@ class Environment:
 
         if dist <= 30.0:
             return True
+        else:
+            return False
 
     def _draw(self):
         self.screen.fill((255, 255, 255))

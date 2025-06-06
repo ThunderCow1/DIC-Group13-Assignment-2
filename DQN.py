@@ -22,13 +22,22 @@ class DQN():
         self.q_table = defaultdict(lambda: np.zeros(len(self.actions)))
         self.state_size = 7
         self.action_size = len(self.actions)
-        self.init_networks(hidden_dim=64, output_dim=self.action_size)
         self.collision = False
         self.target_reached = False
     
     def init_networks(self, hidden_dim, output_dim):
         self.main_network = NN(self.state_size + self.action_size, hidden_dim, output_dim)
         self.target_network = NN(self.state_size + self.action_size, hidden_dim, output_dim)
+
+    def save_networks(self):
+        self.main_network.save("main_net_DQN.npz")
+        self.target_network.save("target_net_DQN.npz")
+
+    def load_networks(self, hidden_dim, output_dim, main_network, target_network):
+        self.main_network = NN(self.state_size + self.action_size, hidden_dim, output_dim)
+        self.target_network = NN(self.state_size + self.action_size, hidden_dim, output_dim)
+        self.main_network.load(main_network)
+        self.target_network.load(target_network)
 
     def update_state(self, x, y, robot_orientation, robot_speed, target_x, target_y):
         self.state = (x, y, robot_orientation, robot_speed, target_x, target_y)

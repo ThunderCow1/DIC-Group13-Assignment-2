@@ -57,6 +57,7 @@ def train_dqn_agent(map_fp,
         #print("Loss:", loss)
         dqn_agent.main_network.backward(q_values, target_q_values_full, learning_rate)
 
+    
     # Train the agents over multiple episodes
     for episode in range(episodes):
         pygame.init()
@@ -64,6 +65,18 @@ def train_dqn_agent(map_fp,
         
         # Initialize the DQN agent
         dqn_agent = DQN(robot=env.robot)
+
+        if episode == 0: # Init network at episode 0 only
+            dqn_agent.init_networks(hidden_dim=64, output_dim=dqn_agent.action_size)
+
+        else: # Update the current network
+            main_net = "main_net_DQN.npz"
+            target_net = "target_net_DQN.npz"
+            dqn_agent.load_networks(hidden_dim = 64, 
+                                    output_dim = dqn_agent.action_size,
+                                    main_network=main_net,
+                                    target_network=target_net
+                                    )
         episode_reward = 0
         done = False
         steps_done = 0
@@ -125,6 +138,10 @@ def train_dqn_agent(map_fp,
             # Optimize the model
             optimize_model()
             steps_done += 1
+
+            # Save the models
+            dqn_agent.save_networks()
+
 
         rewards_per_episode.append(episode_reward)
         print(f"Episode {episode + 1}/{episodes} - Reward: {episode_reward}")

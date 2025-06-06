@@ -57,3 +57,17 @@ class NN:
     
     def predict(self, x):
         return self.forward(x)
+    
+    def save(self, filename):
+        np.savez(filename,
+                 layer1_W=self.layer1.W,
+                 layer1_b=self.layer1.b,
+                 layer2_W=self.layer2.W,
+                 layer2_b=self.layer2.b)
+    
+    def load(self, filename):
+        data = np.load(filename)
+        self.layer1.W = data["layer1_W"]
+        self.layer1.b = data["layer1_b"]
+        self.layer2.W = data["layer2_W"]
+        self.layer2.b = data["layer2_b"]

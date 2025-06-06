@@ -20,7 +20,6 @@ def check_collision(new_pos, robot_radius, object_mask):
         return True  # robot would be partially outside the environment
     
     offset = top_left
-
     return object_mask.overlap(robot_mask, offset) is not None
 
 def action_to_index(action):

@@ -15,7 +15,7 @@ def train_dqn_agent(map_fp,
                     no_gui=False, 
                     target_fps=30, 
                     random_seed=None, 
-                    draw=False, 
+                    draw=True, 
                     episodes=1000,
                     batch_size=32,
                     learning_rate=0.01,
@@ -58,16 +58,16 @@ def train_dqn_agent(map_fp,
         dqn_agent.main_network.backward(q_values, target_q_values_full, learning_rate)
 
     # Train the agents over multiple episodes
-    rewards_per_episode = []
-    steps_done = 0
     for episode in range(episodes):
         pygame.init()
-        env = Environment(map_fp=map_fp, no_gui=no_gui, agent_start_pos=(50,50), target_fps=target_fps, random_seed=random_seed, draw=draw)
+        env = Environment(map_fp=map_fp, agent_start_pos=(50,50), draw=draw)
         
         # Initialize the DQN agent
         dqn_agent = DQN(robot=env.robot)
         episode_reward = 0
         done = False
+        steps_done = 0
+        rewards_per_episode = []
 
         while not done:
             # Get the current state of the environment
@@ -105,11 +105,10 @@ def train_dqn_agent(map_fp,
             for dist in distances:
                 next_state.append(dist)
 
-            print("Position:", env.robot.position)
-            collision = check_collision(env.robot.position, env.robot.size, env.obstacle_mask)
+
+            collision = dqn_agent.collision
             target_reached = env.check_target(env.robot.position, env.robot.size)
             reward = env.reward_function(collision=collision, target_reached=target_reached)
-            print("Collision:", collision, "Target Reached:", target_reached, "Reward:", reward)
             done = target_reached or collision
 
 

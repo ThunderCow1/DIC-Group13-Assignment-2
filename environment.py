@@ -85,6 +85,8 @@ class Environment:
 
         collision = check_collision(new_pos, self.robot.size, self.obstacle_mask)
         target_reached = self.check_target(new_pos, self.robot.size)
+        agent.collision = collision
+        agent.target_reached = target_reached
 
         if target_reached:
             self.map.update_target()

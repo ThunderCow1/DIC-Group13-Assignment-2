@@ -23,6 +23,8 @@ class DQN():
         self.state_size = 7
         self.action_size = len(self.actions)
         self.init_networks(hidden_dim=64, output_dim=self.action_size)
+        self.collision = False
+        self.target_reached = False
     
     def init_networks(self, hidden_dim, output_dim):
         self.main_network = NN(self.state_size + self.action_size, hidden_dim, output_dim)

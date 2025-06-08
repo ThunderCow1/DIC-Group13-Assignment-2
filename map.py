@@ -97,9 +97,10 @@ class Map:
         
         mask = self.create_obstacle_mask()
         i = 0
+        margin=15 # Robot size buffer
         while i < 1000:
             i += 1
-            x, y = random.uniform(0, self.map_size[0]), random.uniform(0, self.map_size[1])
+            x, y = random.uniform(margin, self.map_size[0]-margin), random.uniform(margin, self.map_size[1]-margin)
             if mask.get_at((round(x,0),round(y,0))) == 0:
                 return (x,y)
             

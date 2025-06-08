@@ -155,7 +155,21 @@ class Environment:
         self.screen.blit(cum_reward, [self.map.map_size[0]-50, 10])
 
         pygame.display.flip()
+
+    def reset(self, agent_start_pos: tuple[float, float] = None):
+        if agent_start_pos == None:
+            print('No start position, initialising random position')
+            self.agent_pos = self.map.random_pos()
+        else:
+            self.agent_pos = agent_start_pos
+
+        self.robot.reset(self.agent_pos)
+        self.cum_reward = 0
         
+        if self.draw:
+            self._draw()
+        
+
 if __name__ == "__main__":
     pygame.init()
     env = Environment("map1.json", agent_start_pos = (50,50), draw = True)
@@ -165,15 +179,17 @@ if __name__ == "__main__":
 
     agent = IntuitiveAgent(env.robot)
     clock = pygame.time.Clock()
-
+    i = 0
     while typerun == True:
+        i += 1
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
                 print(np.mean(fpss))
                 typerun = False
         
         env._update(agent=agent)
-        
+        if i % 1000 == 0:
+            env.reset(agent_start_pos=(50,50))
         clock.tick()
         fpss.append(clock.get_fps())
 

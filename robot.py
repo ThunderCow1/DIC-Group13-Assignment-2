@@ -134,6 +134,20 @@ class Robot:
             pygame.draw.line(screen, (0, 255, 0), self.position, hit_point, 2)
             pygame.draw.line(screen, (255, 0, 0), hit_point, end_point, 1)
 
+    def reset(self, position=None, orientation=None, speed=None):
+        if position is not None:
+            self.position = position
+        else:
+            self.position = self.start_position
+        if orientation is not None:
+            self.orientation = orientation
+        else:
+            self.orientation = 0
+        if speed is not None:
+            self.speed = speed
+        else:
+            self.speed = 0
+
 
 
 

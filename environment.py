@@ -69,7 +69,15 @@ class Environment:
         direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x,y])
         angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
         angle_diff = (angle_to_target - self.robot.orientation + 540) % 360 - 180
-
+        state = [x, 
+                                          y, 
+                                          self.robot.orientation,
+                                          self.robot.speed,
+                                          target_x, 
+                                          target_y,
+                                          angle_diff]
+        state.extend(distances)
+        
         action_list = agent.select_action(x, 
                                           y, 
                                           self.robot.orientation,
@@ -104,7 +112,7 @@ class Environment:
             else:
                 npc.position = new_pos
 
-        reward = self.reward_function(collision, target_reached)
+        reward = self.reward_function(collision, target_reached, old_pos, new_pos)
 
         self.cum_reward += reward
 
@@ -113,7 +121,9 @@ class Environment:
         if self.draw:
             self._draw()
 
-    def reward_function(self, collision, target_reached):
+        return state, action_list, reward
+
+    def reward_function(self, collision, target_reached, old_pos, new_pos):
         r = 0
         if not collision and not target_reached:
             r -= 0.01
@@ -122,6 +132,8 @@ class Environment:
         elif target_reached:
             r += 10
         
+        r += 0.05 * (np.linalg.norm(np.array(self.map.current_target) - np.array(old_pos))
+                      - np.linalg.norm(np.array(self.map.current_target) - np.array(new_pos)))
         return r
 
     def check_target(self, new_pos, robot_radius):

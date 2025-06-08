@@ -8,6 +8,7 @@ import numpy as np
 import pygame
 import time
 import math
+import copy
 from tqdm import tqdm
 from helper_functions import check_collision, action_to_index
 
@@ -18,8 +19,9 @@ def train_dqn_agent(map_fp,
                     random_seed=None, 
                     draw=True, 
                     episodes=1000,
+                    max_steps=1000,
                     batch_size=32,
-                    learning_rate=0.01,
+                    learning_rate=0.1,
                     discount_factor=0.9,
                     epsilon=0.1):
 
@@ -28,25 +30,28 @@ def train_dqn_agent(map_fp,
     def optimize_model():
         
         if len(memory)< batch_size:
+            print("Not enough samples in memory to optimize the model.")
             return
         
         batch = random.sample(memory, batch_size)
-        states, actions, rewards, next_states, dones = zip(*batch)
+        states, actions, rewards, next_states = zip(*batch)
 
         states = np.array(states)
-        #print(actions)
         actions = np.array(actions)
         rewards = np.array(rewards)
         next_states = np.array(next_states)
-        dones = np.array(dones)
 
         # Compute Q-values for current state
         q_values = dqn_agent.main_network.predict(states)
+
+        # Predict Q-values for next state using the target network
         next_q_values = dqn_agent.target_network.predict(next_states)
+
         max_next_q_values = np.max(next_q_values, axis=1)
         target_q_values_full = q_values.copy()
+
         for i in range(batch_size):
-            target_q_values_full[i, actions[i]] = rewards[i] + discount_factor * max_next_q_values[i] * (1 - dones[i])
+            target_q_values_full[i, actions[i]] = rewards[i] + discount_factor * max_next_q_values[i]
 
 
         #target_q_values = rewards + discount_factor * max_next_q_values * (1 - dones)
@@ -65,8 +70,12 @@ def train_dqn_agent(map_fp,
     dqn_agent = DQN(robot=env.robot)
 
     # Train the agents over multiple episodes
-    for episode in tqdm(range(episodes)):
-        
+    for episode in range(episodes):
+        if episode % 10 == 0 and episode != 0:
+            print(f"Episode {episode} completed. Saving models...")
+            dqn_agent.save_networks()
+        else:
+            env.draw = False
 
         if episode == 0: # Init network at episode 0 only
             dqn_agent.init_networks(hidden_dim=64, output_dim=dqn_agent.action_size)
@@ -75,70 +84,35 @@ def train_dqn_agent(map_fp,
             env.reset(agent_start_pos=(50,50))
         
         episode_reward = 0
-        done = False
         steps_done = 0
         rewards_per_episode = []
 
-        while not done:
-            # Get the current state of the environment
-            x, y = env.robot.position
-            robot_orientation = env.robot.orientation
-            robot_speed = env.robot.speed
-            target_x, target_y = env.map.current_target
-            direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x,y])
-            angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
-            angle_diff = (angle_to_target - robot_orientation + 540) % 360 - 180
-            distances = env.robot.gain_sensor_output(env.obstacle_mask, get_directions=False)
+        while steps_done < max_steps:
             
-            state = [x, y, robot_orientation, robot_speed, target_x, target_y, angle_diff]
-            for dist in distances:
-                state.append(dist)
 
-            # Select an action using the DQN agent
-            action = dqn_agent.select_action(x, y, robot_orientation, robot_speed, target_x, target_y, angle_diff, distances, epsilon)
+            # Get the current state of the environment
+            state, action_list, reward = env._update(dqn_agent)
 
-            # Take the action in the environment
-            env.robot.take_action([action])
-            env._update(dqn_agent)
-
-            # Get the next state and reward
-            x, y = env.robot.position
-            robot_orientation = env.robot.orientation
-            robot_speed = env.robot.speed
-            target_x, target_y = env.map.current_target
-            direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x,y])
-            angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
-            angle_diff = (angle_to_target - robot_orientation + 540) % 360 - 180
-            distances = env.robot.gain_sensor_output(env.obstacle_mask, get_directions=False)
-
-            next_state = [x, y, robot_orientation, robot_speed, target_x, target_y, angle_diff]
-            for dist in distances:
-                next_state.append(dist)
-
-
-            collision = dqn_agent.collision
-            target_reached = env.check_target(env.robot.position, env.robot.size)
-            reward = env.reward_function(collision=collision, target_reached=target_reached)
-            done = target_reached or collision
-
-
-            # Store the transition in memory
-            for single_action in action:  # action is a list 
-                action_index = action_to_index(single_action)  #"FORWARD" -> 2
-                memory.append((state, action_index, reward, next_state, done))
+            if steps_done != 0:
+                for single_action in prev_action_list:  # action is a list 
+                    action_index = action_to_index(single_action)  #"FORWARD" -> 2
+                    memory.append((prev_state, action_index, prev_reward, state))
 
             episode_reward += reward
+            prev_state = np.copy(state)
+            prev_action_list = np.copy(action_list)
+            prev_reward = reward
 
             if steps_done % 10 == 0:  # Update the target network every 10 steps
-                dqn_agent.target_network = dqn_agent.main_network
-
+                #dqn_agent.target_network = copy.deepcopy(dqn_agent.main_network)
+                pass
+            steps_done += 1
             # Optimize the model
             optimize_model()
-            steps_done += 1
+
 
         # Save the models
-        dqn_agent.save_networks()
-
+        # dqn_agent.save_networks()
 
         rewards_per_episode.append(episode_reward)
         print(f"Episode {episode + 1}/{episodes} - Reward: {episode_reward}")

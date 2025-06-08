@@ -9,6 +9,7 @@ from warnings import warn
 from time import time, sleep
 from datetime import datetime
 import json
+from helper_functions import check_collision
 
 class Obstacle:
     def __init__(self, x, y, width, height):
@@ -100,7 +101,7 @@ class Map:
         while i < 1000:
             i += 1
             x, y = random.uniform(0, self.map_size[0]), random.uniform(0, self.map_size[1])
-            if mask.get_at((round(x,0),round(y,0))) == 0:
+            if not check_collision([x, y], 15, mask):
                 return (x,y)
             
         print('Could not find suitable start position')

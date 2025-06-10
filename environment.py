@@ -173,7 +173,7 @@ if __name__ == "__main__":
     ## for the PPO agent
     is_ppo = isinstance(agent, PPOAgent)
     num_steps = 0
-    max_steps = 2048
+    max_steps = 10000
     episode = 0
 
 

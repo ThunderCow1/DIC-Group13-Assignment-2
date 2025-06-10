@@ -69,6 +69,7 @@ class PPOAgent:
             self.actions[i] for i in range(len(self.actions)) if action_tensor[i].item() == 1
         ]
         self.memory.append((state, action_tensor, log_probs, self.critic(state)))
+        print(f"Selected actions: {action_list}")
         
         
         return action_list

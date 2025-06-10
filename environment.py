@@ -69,13 +69,13 @@ class Environment:
         direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x,y])
         angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
         angle_diff = (angle_to_target - self.robot.orientation + 540) % 360 - 180
-        state = [x, 
-                                          y, 
-                                          self.robot.orientation,
-                                          self.robot.speed,
-                                          target_x, 
-                                          target_y,
-                                          angle_diff]
+        state =[x, 
+                y, 
+                self.robot.orientation,
+                self.robot.speed,
+                target_x, 
+                target_y,
+                angle_diff]
         state.extend(distances)
         
         action_list = agent.select_action(x, 
@@ -93,9 +93,10 @@ class Environment:
 
         collision = check_collision(new_pos, self.robot.size, self.obstacle_mask)
         target_reached = self.check_target(new_pos, self.robot.size)
-        agent.collision = collision
-        agent.target_reached = target_reached
 
+        self.collision = collision
+        self.target_reached = target_reached
+        
         if target_reached:
             self.map.update_target()
 

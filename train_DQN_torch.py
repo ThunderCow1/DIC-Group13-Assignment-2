@@ -20,9 +20,9 @@ def train_dqn_agent(map_fp,
                     random_seed=None, 
                     draw=True, 
                     episodes=1000,
-                    batch_size=32,
+                    batch_size=128,
                     learning_rate=0.001,
-                    discount_factor=0.9,
+                    discount_factor=0.99,
                     epsilon=1):
 
     memory = deque(maxlen = 1000)# Replay memory for DQN agent
@@ -84,10 +84,25 @@ def train_dqn_agent(map_fp,
             angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
             angle_diff = (angle_to_target - robot_orientation + 540) % 360 - 180
             distances = env.robot.gain_sensor_output(env.obstacle_mask, get_directions=False)
+            dist = np.linalg.norm(np.array(env.map.current_target) - np.array(env.robot.position))
+    
+            state = [angle_diff, robot_speed, dist]
+            direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x, y])
+
+            if direction_vec.length() != 0:
+                direction_vec = direction_vec.normalize()
+            else:
+                direction_vec = pygame.Vector2(0, 0)
+
+            # Compute distance between target and agent
+            dist = np.linalg.norm(np.array(env.map.current_target) - np.array(env.robot.position))
+            orientation_rad = math.radians(env.robot.orientation)
+            cos_orientation = math.cos(orientation_rad)
+            sin_orientation = math.sin(orientation_rad)
             
-            state = [x, y, robot_orientation, robot_speed, target_x, target_y, angle_diff]
-            for dist in distances:
-                state.append(dist)
+            state = [angle_diff, direction_vec.x, direction_vec.y, cos_orientation, sin_orientation, dist]
+            # for dist in distances:
+            #     state.append(dist)
 
             # Select an action using the DQN agent
             # Take the action in the environment
@@ -122,7 +137,7 @@ def train_dqn_agent(map_fp,
 
 if __name__ == "__main__":
     pygame.init()
-    train_dqn_agent(map_fp="map1.json", 
+    train_dqn_agent(map_fp="map1 copy.json", 
                     no_gui=False, 
                     target_fps=30, 
                     random_seed=42, 

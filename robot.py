@@ -18,7 +18,7 @@ class Robot:
                  speed: float = 0,
                  top_speed = 10,
                  acceleration=0.1,
-                 turn_speed = 3,
+                 turn_speed = 10,
                  size = 15):
         
         self.position = position

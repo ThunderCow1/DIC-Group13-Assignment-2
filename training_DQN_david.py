@@ -8,7 +8,7 @@ import pygame
 from tqdm import tqdm
 
 def train_dqn(env, episodes=500, max_steps=1000, batch_size=32, memory_size=10000):
-    state_size = 12 # Get state length
+    state_size = 6 # Get state length
     env.reset()  # Initialize the environment
     action_size = 5  # You have 5 actions
 
@@ -43,11 +43,8 @@ def train_dqn(env, episodes=500, max_steps=1000, batch_size=32, memory_size=1000
                 batch = random.sample(memory, batch_size)
                 agent.train(batch)
 
-            if step % 100 == 0:
-                print(agent.predict(np.array(state).reshape(1, -1)))
-
         print(f"Episode {episode+1}/{episodes}, Reward: {env.cum_reward:.2f}, Epsilon: {agent.epsilon:.3f}")
 
 if __name__ == "__main__":
     pygame.init()
-    train_dqn(env=Environment(map_fp="map1.json", agent_start_pos=(50, 50), draw=True))
+    train_dqn(env=Environment(map_fp="map1 copy.json", agent_start_pos=(50, 50), draw=True))

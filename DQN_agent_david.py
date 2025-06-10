@@ -8,8 +8,8 @@ class DQNAgent:
                  learning_rate=0.001, 
                  gamma=0.99, 
                  epsilon=1.0, 
-                 epsilon_min=0.1, epsilon_decay=0.995):
-        self.input_size = 12
+                 epsilon_min=0.1, epsilon_decay=0.99995):
+        self.input_size = 6
         self.action_size = 5
         self.actions = ['turn_right',
                         'turn_left',
@@ -49,8 +49,8 @@ class DQNAgent:
         z2 = np.dot(a1, self.W2) + self.b2
         return z2  # Predicted Q-values(??)
 
-    def select_action(self, x, y, orientation, speed, target_x, target_y, angle_diff, distances):
-        state = np.array([x, y, orientation, speed, target_x, target_y, angle_diff] + list(distances))
+    def select_action(self, angle_diff, direction_vec_x, direction_vec_y, cos_orientation, sin_orientation, dist):
+        state = np.array([angle_diff, direction_vec_x, direction_vec_y, cos_orientation, sin_orientation, dist])
         state = state.reshape(1, -1)  # Reshape to match input size
         if np.random.rand() < self.epsilon:
             return [self.actions[random.randint(0, self.action_size - 1)]]

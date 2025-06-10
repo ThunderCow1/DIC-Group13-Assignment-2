@@ -43,19 +43,15 @@ class DQN():
         self.state = (x, y, robot_orientation, robot_speed, target_x, target_y)
 
     def select_action(self,
-                      x,
-                      y,
-                      robot_orientation,
-                      robot_speed,
-                      target_x,
-                      target_y,
                       angle_diff,
-                      distances,
+                      robot_speed,
+                      dist,
                       epsilon = 0.1):
         # Input of the nn is the state of the robots and the distances combined. 
-        input_vector = [x, y, robot_orientation, robot_speed, target_x, target_y, angle_diff] 
-        for i in distances:
-            input_vector.append(i)
+        input_vector = [angle_diff,
+                      robot_speed,
+                      dist,] 
+        
         input_vector = np.array(input_vector)
 
         if random.random() < epsilon:

@@ -27,18 +27,12 @@ class DQN():
                         'break',
                         'break_hard']
         self.action_size = len(self.actions)
-        self.main_network = NN(input_dim=12, output_dim=5)
-        self.target_network = NN(input_dim = 12, output_dim = 5)
+        self.main_network = NN(input_dim=6, output_dim=5)
+        self.target_network = NN(input_dim = 6, output_dim = 5)
         self.epsilon = epsilon
         
-    def select_action(self, x,y, 
-                      orientation, 
-                      speed, 
-                      target_x, 
-                      target_y, 
-                      angle_diff, 
-                      distances):
-        state = np.array([x, y, orientation, speed, target_x, target_y, angle_diff] + list(distances))
+    def select_action(self, angle_diff, direction_vec_x, direction_vec_y, cos_orientation, sin_orientation, dist):
+        state = np.array([self, angle_diff, direction_vec_x, direction_vec_y, cos_orientation, sin_orientation, dist])
         if np.random.rand()< self.epsilon:
             return [self.actions[random.randint(0, self.action_size - 1)]]
         q_values = self.main_network.forward(state.reshape(1, -1))

@@ -69,27 +69,29 @@ class Environment:
         direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x,y])
         angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
         angle_diff = (angle_to_target - self.robot.orientation + 540) % 360 - 180
-        state =[x, 
-                y, 
-                self.robot.orientation,
-                self.robot.speed,
-                target_x, 
-                target_y,
-                angle_diff]
-        state.extend(distances)
-        
-        action_list = agent.select_action(x, 
-                                          y, 
-                                          self.robot.orientation,
-                                          self.robot.speed,
-                                          target_x, 
-                                          target_y,
-                                          angle_diff,
-                                          distances)
 
+        direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x, y])
+
+        if direction_vec.length() != 0:
+            direction_vec = direction_vec.normalize()
+        else:
+            direction_vec = pygame.Vector2(0, 0)
+
+        # Compute distance between target and agent
+        dist = np.linalg.norm(np.array(self.map.current_target) - np.array(self.robot.position))
+        orientation_rad = math.radians(self.robot.orientation)
+        cos_orientation = math.cos(orientation_rad)
+        sin_orientation = math.sin(orientation_rad)
+
+        state =[angle_diff, direction_vec.x, direction_vec.y, cos_orientation, sin_orientation, dist]
+        
+        action_list = agent.select_action(angle_diff, direction_vec.x, direction_vec.y, cos_orientation, sin_orientation, dist)
+
+        old_orientation = self.robot.orientation
         self.robot.take_action(action_list)
         old_pos = self.robot.position
         new_pos = self.robot._update()
+        new_orientation = self.robot.orientation
 
         collision = check_collision(new_pos, self.robot.size, self.obstacle_mask)
         target_reached = self.check_target(new_pos, self.robot.size)
@@ -113,7 +115,7 @@ class Environment:
             else:
                 npc.position = new_pos
 
-        reward = self.reward_function(collision, target_reached, old_pos, new_pos)
+        reward = self.reward_function(collision, target_reached, old_pos, new_pos, old_orientation, new_orientation)
 
         self.cum_reward += reward
 
@@ -124,17 +126,52 @@ class Environment:
 
         return state, action_list, reward
 
-    def reward_function(self, collision, target_reached, old_pos, new_pos):
+    def reward_function(self, collision, target_reached, old_pos, new_pos, old_orientation, new_orientation):
         r = 0
         if not collision and not target_reached:
-            r -= 0.01
+            r -= 0.1
         elif collision:
-            r -= 2.5
+            r -= 0
         elif target_reached:
-            r += 10
+            r += 2000
         
-        r += 0.05 * (np.linalg.norm(np.array(self.map.current_target) - np.array(old_pos))
+        dist_change = (np.linalg.norm(np.array(self.map.current_target) - np.array(old_pos))
                       - np.linalg.norm(np.array(self.map.current_target) - np.array(new_pos)))
+        old_dist = (np.linalg.norm(np.array(self.map.current_target) - np.array(old_pos)))
+        multiplier = 1 - (old_dist / 1000)
+
+        x, y = old_pos
+        target_x, target_y = self.map.current_target
+        direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x,y])
+        angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
+        old_angle_diff = abs((angle_to_target - old_orientation + 540) % 360 - 180)
+
+        x, y = new_pos
+        target_x, target_y = self.map.current_target
+        direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x,y])
+        angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
+        new_angle_diff = abs((angle_to_target - new_orientation + 540) % 360 - 180)
+
+        angle_change = old_angle_diff - new_angle_diff
+
+        # if angle_change < 0:
+        #     r += 0.05 * angle_change
+        # else:   
+        #     r += 0.05 * angle_change
+
+        if dist_change <= 0:
+            r += 1 * dist_change * multiplier
+        else:
+            r += 1 * dist_change * multiplier
+            r += 0.1 * angle_change
+
+        # if abs(self.robot.orientation) > 360:
+        #     r = -20
+        if abs(self.robot.orientation) > 360:
+            excess = abs(self.robot.orientation) - 360
+            r -= 0.1 * math.exp(0.01 * excess)
+
+        print(r)
         return r
 
     def check_target(self, new_pos, robot_radius):
@@ -190,7 +227,7 @@ if __name__ == "__main__":
     fpss = []
     typerun = True
 
-    agent = IntuitiveAgent(env.robot)
+    agent = HumanAgent(env.robot)
     clock = pygame.time.Clock()
     i = 0
     while typerun == True:

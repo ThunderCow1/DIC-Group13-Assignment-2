@@ -22,7 +22,7 @@ class HumanAgent:
             pygame.K_SPACE: 'break_hard'
         }
 
-    def select_action(self, x, y, target_x, target_y, distances):
+    def select_action(self, angle_diff, direction_vec_x, direction_vec_y, cos_orientation, sin_orientation, boohoo):
         pygame.event.pump()  # Process event queue
         keys = pygame.key.get_pressed()
 
@@ -31,3 +31,6 @@ class HumanAgent:
         ]
 
         return action_list
+    
+    def _update(self, reward, old_pos, action_list):
+        pass

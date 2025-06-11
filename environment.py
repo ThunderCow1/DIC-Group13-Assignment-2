@@ -167,7 +167,7 @@ if __name__ == "__main__":
     typerun = True
 
     agent = IntuitiveAgent(env.robot)
-    #agent = PPOAgent(env.robot)
+    agent = PPOAgent(env.robot)
     clock = pygame.time.Clock()
 
     ## for the PPO agent

@@ -14,8 +14,11 @@ import torch
 import torch.nn as nn
 
 #change to ReLu
+
+
+# slightly deeper network 
 class MLPNetwork(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_dim=128):
+    def __init__(self, input_dim, output_dim, hidden_dim=256):
         super().__init__()
         self.model = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
@@ -26,10 +29,9 @@ class MLPNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, output_dim)
         )
-        
         for layer in self.model:
             if isinstance(layer, nn.Linear):
-                nn.init.orthogonal_(layer.weight, gain=0.5) 
+                nn.init.orthogonal_(layer.weight, gain=0.5)
                 nn.init.constant_(layer.bias, 0.0)
 
     def forward(self, x):
@@ -48,7 +50,18 @@ class PPOAgent:
         self.clip_eps = clip_eps
         self.entropy_coef = entropy_coef
 
-        self.actions = ['turn_right', 'turn_left', 'accelerate', 'break', 'break_hard']
+        #self.actions = ['turn_right', 'turn_left', 'accelerate', 'break', 'break_hard']
+        self.actions = [
+            'noop',                # do nothing
+            'accelerate',
+            'brake',
+            'turn_left',
+            'turn_right',
+            'accel_left',
+            'accel_right',
+            'brake_left',
+            'brake_right'
+        ]
 
         #Network dimensions
         self.state_dim = None
@@ -116,47 +129,35 @@ class PPOAgent:
 
         with torch.no_grad():
             logits = self.actor(state)
-            logits = torch.clamp(logits, -5.0, 5.0)
-            
-            # Handle NaN values
-            if torch.any(torch.isnan(logits)):
-                logits = torch.zeros_like(logits)
-            
-            probs = torch.sigmoid(logits)
-            probs = torch.clamp(probs, 0.1, 0.9)
-            
-            action_tensor = torch.bernoulli(probs)
-            
-            log_probs = torch.sum(action_tensor * torch.log(probs + 1e-8) + 
-                                (1 - action_tensor) * torch.log(1 - probs + 1e-8))
-            
-            value = self.critic(state)
-            
-            # Handle NaN values in value estimate
-            if torch.any(torch.isnan(value)):
-                value = torch.zeros_like(value)
-        
-        action_list = []
-        for i in range(len(self.actions)):
-            if action_tensor[i].item() > 0.5:
-                action_list.append(self.actions[i])
-        
-        # Prevent contradictory actions
-        if 'turn_left' in action_list and 'turn_right' in action_list:
-            if np.random.random() > 0.5:
-                action_list.remove('turn_left')
-            else:
-                action_list.remove('turn_right')
+            action_dist = torch.distributions.Categorical(logits=logits)
+            action = action_dist.sample()
+            log_prob = action_dist.log_prob(action)
+            value = self.critic(state).squeeze()
 
-        if 'accelerate' in action_list and ('break' in action_list or 'break_hard' in action_list):
-            action_list = [a for a in action_list if a not in ['break', 'break_hard']]
-        
+        # Store trajectory data
         self.episode_states.append(state)
-        self.episode_actions.append(action_tensor)
-        self.episode_log_probs.append(log_probs)
+        self.episode_actions.append(action)
+        self.episode_log_probs.append(log_prob)
         self.episode_values.append(value)
-        
+
+        # Convert action index to action list
+        action_name = self.actions[action.item()]
+        action_list = []
+        if 'accel' in action_name:
+            action_list.append('accelerate')
+        if 'brake' in action_name:
+            action_list.append('break')
+        if 'left' in action_name:
+            action_list.append('turn_left')
+        if 'right' in action_name:
+            action_list.append('turn_right')
+        if action_name == 'accelerate':
+            action_list.append('accelerate')
+        elif action_name == 'brake':
+            action_list.append('break')
+
         return action_list
+
 
     def store_reward(self, reward, done):
         reward = np.clip(reward, -100.0, 500.0)
@@ -212,23 +213,34 @@ class PPOAgent:
                 if adv_std > 1e-6:
                     advantages_tensor = (advantages_tensor - adv_mean) / (adv_std + 1e-8)
 
+            #save weight for debugging 
+            actor_weights_before = [param.clone().detach().cpu().numpy() for param in self.actor.parameters()]
+            critic_weights_before = [param.clone().detach().cpu().numpy() for param in self.critic.parameters()]
+
+
             for epoch in range(epochs):
                 logits = self.actor(states)
                 logits = torch.clamp(logits, -5.0, 5.0)
                 probs = torch.sigmoid(logits)
                 probs = torch.clamp(probs, 0.1, 0.9)
                 
-                new_log_probs = torch.sum(actions * torch.log(probs + 1e-8) + 
-                                        (1 - actions) * torch.log(1 - probs + 1e-8), dim=1)
+                logits = self.actor(states)
+                action_dist = torch.distributions.Categorical(logits=logits)
+                new_log_probs = action_dist.log_prob(actions)
                 
                 ratios = torch.exp(new_log_probs - old_log_probs)
-                ratios = torch.clamp(ratios, 0.5, 2.0)
-                
                 surr1 = ratios * advantages_tensor
                 surr2 = torch.clamp(ratios, 1 - self.clip_eps, 1 + self.clip_eps) * advantages_tensor
-                
-                entropy = -torch.sum(probs * torch.log(probs + 1e-8) + (1 - probs) * torch.log(1 - probs + 1e-8), dim=1).mean()
+                entropy = action_dist.entropy().mean()
                 actor_loss = -torch.min(surr1, surr2).mean() - self.entropy_coef * entropy
+                #ratios = torch.exp(new_log_probs - old_log_probs)
+                #ratios = torch.clamp(ratios, 0.5, 2.0)
+                
+                #surr1 = ratios * advantages_tensor
+                #surr2 = torch.clamp(ratios, 1 - self.clip_eps, 1 + self.clip_eps) * advantages_tensor
+                
+                #entropy = -torch.sum(probs * torch.log(probs + 1e-8) + (1 - probs) * torch.log(1 - probs + 1e-8), dim=1).mean()
+                #actor_loss = -torch.min(surr1, surr2).mean() - self.entropy_coef * entropy
                 
                 values = self.critic(states).squeeze()
                 if values.dim() == 0:
@@ -250,7 +262,19 @@ class PPOAgent:
                 critic_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
                 self.critic_optimizer.step()
-            
+
+            #print weights for debugging 
+            actor_weights_after = [param.clone().detach().cpu().numpy() for param in self.actor.parameters()]
+            critic_weights_after = [param.clone().detach().cpu().numpy() for param in self.critic.parameters()]
+
+            # Print weight differences
+            # print("Actor weight changes (L2 norm):")
+            # for before, after in zip(actor_weights_before, actor_weights_after):
+            #     print(np.linalg.norm(after - before))
+
+            # print("Critic weight changes (L2 norm):")
+            # for before, after in zip(critic_weights_before, critic_weights_after):
+            #     print(np.linalg.norm(after - before))
         except Exception as e:
             pass
         

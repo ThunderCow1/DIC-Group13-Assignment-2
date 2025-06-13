@@ -38,6 +38,7 @@ class MLPNetwork(nn.Module):
         return self.model(x)
 
 
+
 class PPOAgent:
     def __init__(self, robot: Robot, lr_actor=3e-4, lr_critic=1e-3,
                  gamma=0.99, lam=0.95, clip_eps=0.2, entropy_coef=0.02):
@@ -212,6 +213,7 @@ class PPOAgent:
                 adv_std = advantages_tensor.std()
                 if adv_std > 1e-6:
                     advantages_tensor = (advantages_tensor - adv_mean) / (adv_std + 1e-8)
+                    advantages_tensor = torch.clamp(advantages, -5.0, 5.0) #trying to clip advantages
 
             #save weight for debugging 
             actor_weights_before = [param.clone().detach().cpu().numpy() for param in self.actor.parameters()]

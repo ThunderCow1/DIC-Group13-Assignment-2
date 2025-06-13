@@ -5,25 +5,44 @@ from environment import Environment
 from PPO_agent import PPOAgent
 from helper_functions import check_collision
 import os
+import torch 
+import time
+
+
+def save_model(agent, path="models", prefix="ppo"):
+  
+    os.makedirs(path, exist_ok=True)
+    timestamp = int(time.time()) % 10000  
+    
+ 
+    actor_path = f"{path}/{prefix}_actor_{timestamp}.pt"
+    torch.save(agent.actor.state_dict(), actor_path)
+    
+
+    critic_path = f"{path}/{prefix}_critic_{timestamp}.pt"
+    torch.save(agent.critic.state_dict(), critic_path)
+    
+    print(f"Model saved to {actor_path} and {critic_path}")
+    return actor_path, critic_path
 
 def train():
 
     pygame.init()
 
     config = {
-        'num_episodes': 1000,
+        'num_episodes': 15000, 
         'max_steps_per_episode': 500,
         'lr_actor': 3e-4,
         'lr_critic': 1e-3,
         'gamma': 0.99,
         'lam': 0.95,
         'clip_eps': 0.1,
-        'entropy_coef': 0.06,
+        'entropy_coef': 0.1, #0.1 has been tested and works the best
         'train_epochs': 8
     }
     
     # Create environment and agent
-    env = Environment("map2.json", agent_start_pos=(50, 50), draw=False)
+    env = Environment("map2.json", agent_start_pos=(50, 50), draw=True)
     agent = PPOAgent(env.robot, 
                      lr_actor=config['lr_actor'], 
                      lr_critic=config['lr_critic'],
@@ -111,14 +130,15 @@ def train():
 
             
             if collision:
-                reward = -100.0
+                reward = -50
+                reward = -10
                 env.robot.speed = 0
                 collision_count += 1
                 done = True
 
             
             elif target_reached:
-                reward = 500.0
+                reward = 500
                 targets_hit += 1
                 total_targets += 1
                 env.map.update_target()
@@ -168,6 +188,10 @@ def train():
         
     
     print(f"Total targets reached: {total_targets}")
+    
+    # Save final model
+    final_paths = save_model(agent, prefix="final")
+    print(f"Training complete! Final model saved to {final_paths[0]}")
     
     pygame.quit()
 

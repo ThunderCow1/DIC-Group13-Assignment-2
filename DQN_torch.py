@@ -27,8 +27,8 @@ class DQN():
                         'break',
                         'break_hard']
         self.action_size = len(self.actions)
-        self.main_network = NN(input_dim=12, output_dim=5)
-        self.target_network = NN(input_dim = 12, output_dim = 5)
+        self.main_network = NN(input_dim=20, output_dim=5)
+        self.target_network = NN(input_dim = 20, output_dim = 5)
         self.epsilon = epsilon
         
     def select_action(self, x,y, 
@@ -42,7 +42,8 @@ class DQN():
         if np.random.rand()< self.epsilon:
             return [self.actions[random.randint(0, self.action_size - 1)]]
         state = torch.Tensor(state)
-        q_values = self.main_network.forward(state.reshape(1, -1))
+        with torch.no_grad():
+            q_values = self.main_network.forward(state.reshape(1, -1))
         r = torch.argmax(q_values[0])
         return [self.actions[r]]
     

@@ -16,7 +16,7 @@ class Robot:
                  position: tuple[float, float] = None,
                  orientation: float = 0,
                  speed: float = 0,
-                 top_speed = 10,
+                 top_speed = 6,
                  acceleration=0.1,
                  turn_speed = 3,
                  size = 15):
@@ -74,7 +74,7 @@ class Robot:
         pygame.draw.circle(surface, (255,255,255), (x +dx , y + dy), self.size/3)
         pygame.draw.circle(surface, (0,0,0), (x +1.1*dx , y + 1.1*dy), self.size/6)
 
-    def gain_sensor_output(self, mask, sensors = [-90, -45, 0, 45, 90], max_distance = 256, get_directions = False):
+    def gain_sensor_output(self, mask, sensors = [-90, -75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75, 90], max_distance = 256, get_directions = False):
         
         outputs = []
         directions = []

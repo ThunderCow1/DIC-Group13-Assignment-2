@@ -113,7 +113,7 @@ class Environment:
             else:
                 npc.position = new_pos
 
-        reward = self.reward_function(collision, target_reached, old_pos, new_pos)
+        reward = self.reward_function(collision, target_reached, old_pos, new_pos, distances)
 
         self.cum_reward += reward
 
@@ -124,18 +124,27 @@ class Environment:
 
         return state, action_list, reward
 
-    def reward_function(self, collision, target_reached, old_pos, new_pos):
-        r = 0
+    def reward_function(self, collision, target_reached, old_pos, new_pos, distances):
+        x_t, y_t = new_pos
+        x_t1, y_t1 = old_pos
+        x_target, y_target = self.map.current_target
+        distance_to_target = np.linalg.norm(np.array(self.map.current_target) - np.array(new_pos))
+        closest_obstacle_distance = min(distances)
+
+        distance_r = 0
+        orientation_r = np.arctan2(y_t - y_target, x_t - x_target) - np.arctan2(y_t1 - y_target, x_t1 - x_target)
         if not collision and not target_reached:
-            r -= 0.01
+            # reward if moving close to an obstacle
+            if closest_obstacle_distance < 30:
+                distance_r = 1- np.exp(0.2 * distance_to_target/1000) - 0.5/(closest_obstacle_distance) + orientation_r
+            else:
+                distance_r = 1 - np.exp(0.2 * distance_to_target/1000) + orientation_r
         elif collision:
-            r -= 2.5
+            distance_r = -20
         elif target_reached:
-            r += 10
-        
-        r += 0.05 * (np.linalg.norm(np.array(self.map.current_target) - np.array(old_pos))
-                      - np.linalg.norm(np.array(self.map.current_target) - np.array(new_pos)))
-        return r
+            distance_r = 20
+
+        return distance_r
 
     def check_target(self, new_pos, robot_radius):
         dist = np.linalg.norm(np.array(self.map.current_target) - np.array(new_pos))

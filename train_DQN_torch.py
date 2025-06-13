@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 import tqdm
 from helper_functions import check_collision, action_to_index
+import matplotlib.pyplot as plt
 import math
 
 def normalize_state(state):
@@ -19,8 +20,9 @@ def normalize_state(state):
                 state[3] /= 10.0
                 state[4] /= 1000.0
                 state[5] /= 1000.0
-                for i in range(6,12):
-                    state[i]/=256
+                state[6] /= 180.0
+                for i in range(7,20):
+                    state[i]/= 256
                 return state
 
 # Main function to train the DQN agent
@@ -30,14 +32,14 @@ def train_dqn_agent(map_fp,
                     random_seed=None, 
                     draw=True, 
                     episodes=1000,
-                    batch_size=32,
-                    learning_rate=0.001,
+                    batch_size= 64,
+                    learning_rate=0.01,
                     discount_factor=0.9,
                     epsilon=1):
 
-    memory = deque(maxlen = 10000)# Replay memory for DQN agent
+    memory = deque(maxlen=10000)# Replay memory for DQN agent
     epsilon_min = 0.01
-    epsilon_decay = 0.995
+    epsilon_decay = 0.9995
 
     dqn_agent = DQN(epsilon)
     optimizer = torch.optim.Adam(dqn_agent.main_network.parameters(), lr = learning_rate)
@@ -58,7 +60,6 @@ def train_dqn_agent(map_fp,
 
         # Compute Q-values for current state
         q_values = dqn_agent.main_network(states)
-        
         with torch.no_grad():
             max_next_q_values = dqn_agent.target_network(next_states).max(1)[0]
             target_q_values = rewards + discount_factor * max_next_q_values * (1-dones)
@@ -73,7 +74,7 @@ def train_dqn_agent(map_fp,
         optimizer.step()
     
     env = Environment(map_fp=map_fp, agent_start_pos=(50,50), draw=draw)
-
+    rewards_per_episode = []
     # Train the agents over multiple episodes
     for episode in range(episodes):
         pygame.init()
@@ -81,8 +82,7 @@ def train_dqn_agent(map_fp,
 
         episode_reward = 0
         done = False
-        steps_done = 0
-        rewards_per_episode = []
+        steps_done = 0    
 
         while not done:
             # Get the current state of the environment
@@ -99,7 +99,6 @@ def train_dqn_agent(map_fp,
             for dist in distances:
                 state.append(dist)
             state = normalize_state(state)
-            
             ####################################################
             prev_position = pygame.Vector2(x, y)
             target_position = pygame.Vector2(target_x, target_y)
@@ -112,33 +111,34 @@ def train_dqn_agent(map_fp,
             next_state = normalize_state(next_state)
             collision = env.collision
             target_reached = env.target_reached
-            done = target_reached or collision
+            done = collision
 
-            new_x, new_y = env.robot.position
-            new_position = pygame.Vector2(new_x, new_y)
-            new_distance = new_position.distance_to(target_position)
+            #######################################################
+            # new_x, new_y = env.robot.position
+            # new_position = pygame.Vector2(new_x, new_y)
+            # new_distance = new_position.distance_to(target_position)
             
-            #########################################################
-            # Reward shaping
-            reward = 0.0
+            # # Reward shaping
+            # reward = 0.0
+            # if not env.target_reached and not env.collision:
+            #      reward -= 0.1
+            # # Check for reaching target or collision
+            # elif env.target_reached:
+            #     reward = 100.0
+            # elif env.collision:
+            #     reward = -100.0
+            
+            # # Encourage forward progress
+            # distance_delta = prev_distance - new_distance
+            # reward += 0.1 * distance_delta  # reward getting closer
 
-            # Check for reaching target or collision
-            if env.target_reached:
-                reward = 100.0
-            elif env.collision:
-                reward = -100.0
-            else:
-                # Encourage forward progress
-                distance_delta = prev_distance - new_distance
-                reward += 0.5 * distance_delta  # reward getting closer
-
-                # Small step penalty
-                reward -= 0.1
+                # # Small step penalty
+                # reward -= 0.1
 
                 # Optional: penalize proximity to obstacles
-                min_dist = min(distances)
-                if min_dist < 30:  # threshold in pixels
-                    reward -= (30 - min_dist) * 0.5  # penalty increases near obstacles
+                # min_dist = min(distances)
+                # if min_dist < 30:  # threshold in pixels
+                #     reward -= (30 - min_dist) * 0.5  # penalty increases near obstacles
             ##############################################################
 
             # Store the transition in memory
@@ -151,7 +151,7 @@ def train_dqn_agent(map_fp,
             # Optimize the model
             optimize_model()
 
-            if steps_done % 100 == 0:  # Update the target network every 10 steps
+            if steps_done % 1000 == 0:  # Update the target network every 10 steps
                 dqn_agent.target_network.load_state_dict(dqn_agent.main_network.state_dict())
             
             steps_done += 1
@@ -165,6 +165,14 @@ def train_dqn_agent(map_fp,
 
     print("Training completed.")
 
+    # Plot reward per episode
+    plt.plot(rewards_per_episode)
+    plt.xlabel('Episode')
+    plt.ylabel('Reward')
+    plt.title('DQN Training Rewards')
+    plt.show()
+
+
 if __name__ == "__main__":
     pygame.init()
     train_dqn_agent(map_fp="map1.json", 
@@ -172,4 +180,4 @@ if __name__ == "__main__":
                     target_fps=30, 
                     random_seed=42, 
                     draw=True, 
-                    episodes=1000)
+                    episodes= 2000)

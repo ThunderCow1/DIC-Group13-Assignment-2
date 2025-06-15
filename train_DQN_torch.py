@@ -33,13 +33,13 @@ def train_dqn_agent(map_fp,
                     draw=True, 
                     episodes=1000,
                     batch_size= 64,
-                    learning_rate=0.01,
-                    discount_factor=0.9,
+                    learning_rate=0.001,
+                    discount_factor=0.999,
                     epsilon=1):
 
     memory = deque(maxlen=10000)# Replay memory for DQN agent
     epsilon_min = 0.01
-    epsilon_decay = 0.9995
+    epsilon_decay = 0.999
 
     dqn_agent = DQN(epsilon)
     optimizer = torch.optim.Adam(dqn_agent.main_network.parameters(), lr = learning_rate)
@@ -75,15 +75,15 @@ def train_dqn_agent(map_fp,
     
     env = Environment(map_fp=map_fp, agent_start_pos=(50,50), draw=draw)
     rewards_per_episode = []
+    steps_done = 0 
     # Train the agents over multiple episodes
     for episode in range(episodes):
         pygame.init()
-        env.reset(agent_start_pos=(50,50))             
+        env.reset()             
 
         episode_reward = 0
         done = False
-        steps_done = 0    
-
+        episode_step = 0
         while not done:
             # Get the current state of the environment
             x, y = env.robot.position
@@ -99,11 +99,7 @@ def train_dqn_agent(map_fp,
             for dist in distances:
                 state.append(dist)
             state = normalize_state(state)
-            ####################################################
-            prev_position = pygame.Vector2(x, y)
-            target_position = pygame.Vector2(target_x, target_y)
-            prev_distance = prev_position.distance_to(target_position)
-            #####################################################
+            old_pos = env.robot.position
 
             # Select an action using the DQN agent
             # Take the action in the environment
@@ -111,50 +107,64 @@ def train_dqn_agent(map_fp,
             next_state = normalize_state(next_state)
             collision = env.collision
             target_reached = env.target_reached
-            done = collision
+            # End episode after 2000 steps
+            done = episode_step >= 1000
 
             #######################################################
-            # new_x, new_y = env.robot.position
-            # new_position = pygame.Vector2(new_x, new_y)
-            # new_distance = new_position.distance_to(target_position)
-            
-            # # Reward shaping
-            # reward = 0.0
-            # if not env.target_reached and not env.collision:
-            #      reward -= 0.1
-            # # Check for reaching target or collision
-            # elif env.target_reached:
-            #     reward = 100.0
-            # elif env.collision:
-            #     reward = -100.0
-            
-            # # Encourage forward progress
-            # distance_delta = prev_distance - new_distance
-            # reward += 0.1 * distance_delta  # reward getting closer
-
-                # # Small step penalty
-                # reward -= 0.1
-
-                # Optional: penalize proximity to obstacles
-                # min_dist = min(distances)
-                # if min_dist < 30:  # threshold in pixels
-                #     reward -= (30 - min_dist) * 0.5  # penalty increases near obstacles
+            # REWARD FUNCTION
+            new_pos = env.robot.position
+            x_t, y_t = new_pos
+            x_t1, y_t1 = old_pos
+            x_target, y_target = env.map.current_target
+            distance_to_target = np.linalg.norm(np.array(env.map.current_target) - np.array(new_pos))
+            closest_obstacle_distance = min(distances)
+            turn_reward = 0
+            distance_r = 0
+            # Calculate orientation reward based on the angle difference
+            # between the robot's current orientation towards the target and the previous orientation
+            orientation_r = 0
+            if x_t == x_t1 and y_t == y_t1:
+                # If the robot did not move, we do not want to give a reward
+                orientation_r = 0
+            else:
+                # Calculate the angle difference between the current and previous position towards the target
+                # This gives us a measure of how much the robot is turning towards or away from the target
+                orientation_r = np.arctan2(y_t - y_target, x_t - x_target) - np.arctan2(y_t1 - y_target, x_t1 - x_target)
+                orientation_r = np.degrees(orientation_r)
+            if not collision and not target_reached:
+                if closest_obstacle_distance < 30:
+                    # if sum of left side sensors is larger than right side, reward for turning left
+                    if sum(distances[0:7]) > sum(distances[8:13]) and 'turn_left' in action_list:
+                        turn_reward = 5
+                    # if sum of right side sensors is larger than left side, reward for turning right
+                    elif sum(distances[0:7]) < sum(distances[8:13]) and 'turn_right' in action_list:
+                        turn_reward = 5
+                    distance_r = 1- np.exp(0.2 * distance_to_target/1000) - 0.5/(closest_obstacle_distance)
+                else:
+                    distance_r = 1 - np.exp(0.2 * distance_to_target/1000) +5*orientation_r
+            elif collision:
+                distance_r = -20
+            elif target_reached:
+                distance_r = 100
+            reward = distance_r + turn_reward
             ##############################################################
 
             # Store the transition in memory
             for single_action in action_list: 
                 action_index = action_to_index(single_action)
                 memory.append((state, action_index, reward, next_state, done))
-
+            #print(f"Action taken: {action_list}, Reward: {reward}")
             episode_reward += reward
-
+            # Print weight of the main network for debugging
+          
             # Optimize the model
             optimize_model()
 
-            if steps_done % 1000 == 0:  # Update the target network every 10 steps
+            if steps_done % 1000 == 0:  # Update the target network every 1000 steps
                 dqn_agent.target_network.load_state_dict(dqn_agent.main_network.state_dict())
             
             steps_done += 1
+            episode_step += 1
 
         # Decay epsilon
         epsilon = max(epsilon_min, epsilon_decay * epsilon)
@@ -162,7 +172,8 @@ def train_dqn_agent(map_fp,
 
         rewards_per_episode.append(episode_reward)
         print(f"Episode {episode + 1}/{episodes} - Reward: {episode_reward}")
-
+    torch.save(dqn_agent.main_network.state_dict(), "dqn_model.pt")
+    pygame.quit()
     print("Training completed.")
 
     # Plot reward per episode

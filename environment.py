@@ -116,19 +116,16 @@ class Environment:
 
     def reward_function(self, collision, target_reached, old_pos, new_pos):
         r = 0
-        if collision:
-            r -= 2.5
-        if target_reached:
-            r += 10
         if not collision and not target_reached:
-            r -= 0.01  # slight penalty for time/steps taken
+            r -= 0.01
+        elif collision:
+            r -= 2.5
+        elif target_reached:
+            r += 10
 
-        if not collision:
-            r += 0.01 * (
-                np.linalg.norm(np.array(self.map.current_target) - np.array(old_pos)) -
-                np.linalg.norm(np.array(self.map.current_target) - np.array(new_pos))
-            )
-
+        r += 0.01 * (np.linalg.norm(np.array(self.map.current_target) - np.array(old_pos))
+                      - np.linalg.norm(np.array(self.map.current_target) - np.array(new_pos)))
+        
         return r
 
     def check_target(self, new_pos, robot_radius):
@@ -161,23 +158,10 @@ class Environment:
         self.screen.blit(cum_reward, [self.map.map_size[0]-50, 10])
 
         pygame.display.flip()
-
-    def reset(self, agent_start_pos: tuple[float, float] = None):
-        if agent_start_pos == None:
-            print('No start position, initialising random position')
-            self.agent_pos = self.map.random_pos()
-        else:
-            self.agent_pos = agent_start_pos
-
-        self.robot.reset(self.agent_pos)
-        self.cum_reward = 0
-        
-        if self.draw:
-            self._draw()
         
 if __name__ == "__main__":
     pygame.init()
-    env = Environment("map1.json", agent_start_pos = (50,50), draw = False)
+    env = Environment("map2.json", agent_start_pos = (50,50), draw = True)
     # env.npcs.append(NPC((700,500),3,15,0.01))
     fpss = []
     typerun = True

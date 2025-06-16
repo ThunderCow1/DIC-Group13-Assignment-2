@@ -25,6 +25,10 @@ def normalize_state(state):
                     state[i]/= 256
                 return state
 
+def soft_update_target_network(main_net, target_net, tau):
+    for target_param, main_param in zip(target_net.parameters(), main_net.parameters()):
+        target_param.data.copy_(tau * main_param.data + (1.0 - tau) * target_param.data)
+
 # Main function to train the DQN agent
 def train_dqn_agent(map_fp, 
                     no_gui=False, 
@@ -39,7 +43,8 @@ def train_dqn_agent(map_fp,
 
     memory = deque(maxlen=10000)# Replay memory for DQN agent
     epsilon_min = 0.01
-    epsilon_decay = 0.999
+    epsilon_decay = 0.996
+    train_iterations_per_step = 5
 
     dqn_agent = DQN(epsilon)
     optimizer = torch.optim.Adam(dqn_agent.main_network.parameters(), lr = learning_rate)
@@ -52,7 +57,6 @@ def train_dqn_agent(map_fp,
         states, actions, rewards, next_states, dones = zip(*batch)
 
         states = torch.FloatTensor(states)
-        #print(actions)
         actions = torch.LongTensor(actions)
         rewards = torch.FloatTensor(rewards)
         next_states = torch.FloatTensor(next_states)
@@ -63,7 +67,6 @@ def train_dqn_agent(map_fp,
         with torch.no_grad():
             max_next_q_values = dqn_agent.target_network(next_states).max(1)[0]
             target_q_values = rewards + discount_factor * max_next_q_values * (1-dones)
-
         # Select only the Q-values of the taken actions
         q_values_taken = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
 
@@ -78,7 +81,6 @@ def train_dqn_agent(map_fp,
     steps_done = 0 
     # Train the agents over multiple episodes
     for episode in range(episodes):
-        pygame.init()
         env.reset()             
 
         episode_reward = 0
@@ -111,7 +113,7 @@ def train_dqn_agent(map_fp,
             done = episode_step >= 1000
 
             #######################################################
-            # REWARD FUNCTION
+            #REWARD FUNCTION
             new_pos = env.robot.position
             x_t, y_t = new_pos
             x_t1, y_t1 = old_pos
@@ -120,48 +122,55 @@ def train_dqn_agent(map_fp,
             closest_obstacle_distance = min(distances)
             turn_reward = 0
             distance_r = 0
+            orientation_r = 0
             # Calculate orientation reward based on the angle difference
             # between the robot's current orientation towards the target and the previous orientation
-            orientation_r = 0
+            tx = x_target - x_t1
+            ty = y_target - y_t1
+            dx = x_t- x_t1
+            dy = y_t - y_t1
+            dot = dx * tx + dy * ty
+            norm_movement = np.sqrt(dx**2 + dy**2)
+            norm_target = np.sqrt(tx**2 + ty**2)
+            cos_theta = dot / (norm_movement * norm_target + 1e-10)
+            angle = np.arccos(np.clip(cos_theta, -1, 1))
+            angle_deg = np.degrees(angle)
             if x_t == x_t1 and y_t == y_t1:
-                # If the robot did not move, we do not want to give a reward
-                orientation_r = 0
+                orientation_r = 0.5
             else:
                 # Calculate the angle difference between the current and previous position towards the target
-                # This gives us a measure of how much the robot is turning towards or away from the target
-                orientation_r = np.arctan2(y_t - y_target, x_t - x_target) - np.arctan2(y_t1 - y_target, x_t1 - x_target)
-                orientation_r = np.degrees(orientation_r)
+                # This gives us a measure of how much the robot is turning away from the target
+                orientation_r = angle_deg/180.0
+                 
             if not collision and not target_reached:
                 if closest_obstacle_distance < 30:
                     # if sum of left side sensors is larger than right side, reward for turning left
                     if sum(distances[0:7]) > sum(distances[8:13]) and 'turn_left' in action_list:
-                        turn_reward = 5
+                        turn_reward = 10
                     # if sum of right side sensors is larger than left side, reward for turning right
                     elif sum(distances[0:7]) < sum(distances[8:13]) and 'turn_right' in action_list:
-                        turn_reward = 5
-                    distance_r = 1- np.exp(0.2 * distance_to_target/1000) - 0.5/(closest_obstacle_distance)
+                        turn_reward = 10
+                    distance_r = 1- np.exp(0.4 * distance_to_target/1000) - 0.5/(closest_obstacle_distance)
                 else:
-                    distance_r = 1 - np.exp(0.2 * distance_to_target/1000) +5*orientation_r
+                    distance_r = 1 - np.exp(0.4 * distance_to_target/1000) - orientation_r
             elif collision:
                 distance_r = -20
             elif target_reached:
                 distance_r = 100
             reward = distance_r + turn_reward
             ##############################################################
-
             # Store the transition in memory
             for single_action in action_list: 
                 action_index = action_to_index(single_action)
                 memory.append((state, action_index, reward, next_state, done))
-            #print(f"Action taken: {action_list}, Reward: {reward}")
             episode_reward += reward
-            # Print weight of the main network for debugging
           
             # Optimize the model
-            optimize_model()
+            for _ in range(train_iterations_per_step):
+                optimize_model()
 
-            if steps_done % 1000 == 0:  # Update the target network every 1000 steps
-                dqn_agent.target_network.load_state_dict(dqn_agent.main_network.state_dict())
+            tau = 0.01
+            soft_update_target_network(dqn_agent.main_network, dqn_agent.target_network, tau)
             
             steps_done += 1
             episode_step += 1
@@ -186,9 +195,9 @@ def train_dqn_agent(map_fp,
 
 if __name__ == "__main__":
     pygame.init()
-    train_dqn_agent(map_fp="map1.json", 
+    train_dqn_agent(map_fp="map2.json", 
                     no_gui=False, 
                     target_fps=30, 
                     random_seed=42, 
                     draw=True, 
-                    episodes= 2000)
+                    episodes= 1000)

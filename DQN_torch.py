@@ -10,8 +10,8 @@ from collections import deque
 class NN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(NN,self).__init__()
-        self.fc1 = nn.Linear(input_dim, 128)
-        self.fc2 = nn.Linear(128,128)
+        self.fc1 = nn.Linear(input_dim, 256)
+        self.fc2 = nn.Linear(256,128)
         self.fc3 = nn.Linear(128,output_dim)
 
     def forward(self, x):
@@ -21,14 +21,13 @@ class NN(nn.Module):
     
 class DQN():
     def __init__(self, epsilon):
-        self.actions = ['turn_right',
-                        'turn_left',
-                        'accelerate',
-                        'break',
-                        'break_hard']
+        self.actions = ['move_up',
+                        'move_down',
+                        'move_left',
+                        'move_right']
         self.action_size = len(self.actions)
-        self.main_network = NN(input_dim=20, output_dim=5)
-        self.target_network = NN(input_dim = 20, output_dim = 5)
+        self.main_network = NN(input_dim=17, output_dim=4)
+        self.target_network = NN(input_dim=17, output_dim=4)
         self.epsilon = epsilon
         
     def select_action(self, x,y, 
@@ -38,7 +37,8 @@ class DQN():
                       target_y, 
                       angle_diff, 
                       distances):
-        state = np.array([x, y, orientation, speed, target_x, target_y, angle_diff] + list(distances))
+        distance = np.linalg.norm(np.array([target_x, target_y]) - np.array([x, y]))
+        state = np.array([x, y, target_x, target_y] + list(distances))
         if np.random.rand()< self.epsilon:
             return [self.actions[random.randint(0, self.action_size - 1)]]
         state = torch.Tensor(state)

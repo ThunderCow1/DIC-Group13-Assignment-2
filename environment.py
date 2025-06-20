@@ -10,7 +10,7 @@ from warnings import warn
 from time import time, sleep
 from datetime import datetime
 from map import Map
-from robot import Robot
+from robot2 import Robot
 from random_agent import RandomAgent
 from human_agent import HumanAgent
 from intuitive_agent import IntuitiveAgent
@@ -70,12 +70,9 @@ class Environment:
         angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
         angle_diff = (angle_to_target - self.robot.orientation + 540) % 360 - 180
         state =[x, 
-                y, 
-                self.robot.orientation,
-                self.robot.speed,
-                target_x, 
-                target_y,
-                angle_diff]
+                y,
+                target_x,
+                target_y]
         state.extend(distances)
         
         action_list = agent.select_action(x, 
@@ -86,10 +83,9 @@ class Environment:
                                           target_y,
                                           angle_diff,
                                           distances)
-
-        self.robot.take_action(action_list)
         old_pos = self.robot.position
-        new_pos = self.robot._update()
+        self.robot.take_action(action_list)
+        new_pos = self.robot.position
 
         collision = check_collision(new_pos, self.robot.size, self.obstacle_mask)
         target_reached = self.check_target(new_pos, self.robot.size)
@@ -135,7 +131,6 @@ class Environment:
 
         r += 0.01 * (np.linalg.norm(np.array(self.map.current_target) - np.array(old_pos))
                       - np.linalg.norm(np.array(self.map.current_target) - np.array(new_pos)))
-        
         return r
 
     def check_target(self, new_pos, robot_radius):

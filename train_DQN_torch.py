@@ -16,9 +16,8 @@ import math
 from collections import Counter
 
 def normalize_state(state):
-                state[0], state[1] = state[0]/1000.0, state[1]/1000.0
-                state[2], state[3] = state[2]/1000.0, state[3]/1000.0
-                for i in range(4, len(state)):
+                state[2] = state[2]/180.0  # Normalize angle difference to [-1, 1]
+                for i in range(3, len(state)):
                     state[i]/= 256
                 return state
 
@@ -35,7 +34,7 @@ def train_dqn_agent(map_fp,
                     episodes=1000,
                     batch_size= 128,
                     learning_rate=0.0001,
-                    discount_factor=0.995,
+                    discount_factor=0.99,
                     epsilon=1):
 
     memory = deque(maxlen=100000)# Replay memory for DQN agent
@@ -58,17 +57,16 @@ def train_dqn_agent(map_fp,
         rewards = torch.FloatTensor(rewards)
         next_states = torch.FloatTensor(next_states)
         dones = torch.FloatTensor(dones)
-
         # Compute Q-values for current state
         q_values = dqn_agent.main_network(states)
         with torch.no_grad():
-            print(dqn_agent.target_network(next_states).max(1))
             max_next_q_values = dqn_agent.target_network(next_states).max(1)[0]
             target_q_values = rewards + discount_factor * max_next_q_values * (1-dones)
 
         # Select only the Q-values of the taken actions
         q_values_taken = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
-
+        print("Q-values taken:", q_values_taken)
+        print("Target Q-values:", target_q_values)
         loss = nn.MSELoss()(q_values_taken, target_q_values)
         optimizer.zero_grad()
         loss.backward()
@@ -102,8 +100,10 @@ def train_dqn_agent(map_fp,
             old_pos = env.robot.position
             old_distance = np.linalg.norm(np.array(env.map.current_target) - np.array(old_pos))
 
+            dx = (target_x - x) / 1000.0
+            dy = (target_y - y) / 1000.0
             # Normalize the state
-            state = [x, y, target_x, target_y]
+            state = [dx, dy, angle_diff]
             for dist in distances:
                 state.append(dist)
             state = normalize_state(state)
@@ -115,8 +115,9 @@ def train_dqn_agent(map_fp,
             next_state = normalize_state(next_state)
             collision = env.collision
             target_reached = env.target_reached
-            # End episode after 2000 steps
-            done = collision
+
+            # End episode after reaching a terminal state
+            done = collision or target_reached
             if target_reached:
                  targets_achieved += 1
 
@@ -127,9 +128,8 @@ def train_dqn_agent(map_fp,
             distance_r = 0
             distance_r -= 0.01 # Small penalty for each step taken
             if not collision and not target_reached:
-                # distance_r += 0.1 * (np.linalg.norm(np.array(env.map.current_target) - np.array(old_pos)) 
-                #                      - np.linalg.norm(np.array(env.map.current_target) - np.array(new_pos))) #- orientation_r
-                distance_r += 0
+                distance_r += 0.01 * (np.linalg.norm(np.array(env.map.current_target) - np.array(old_pos)) 
+                                     - np.linalg.norm(np.array(env.map.current_target) - np.array(new_pos))) #- orientation_r
             elif collision:
                 distance_r += -2.5
             elif target_reached:
@@ -143,13 +143,12 @@ def train_dqn_agent(map_fp,
 
             ##############################################################
             # Store the transition in memory
-            for single_action in action_list: 
-                action_index = action_to_index(single_action)
-                if target_reached or collision:
-                    for _ in range(5):
-                        memory.append((state, action_index, reward, next_state, done))
-                else:
+            action_index = action_to_index(action_list[0])
+            if collision:
+                for _ in range(5):
                     memory.append((state, action_index, reward, next_state, done))
+            else:
+                memory.append((state, action_index, reward, next_state, done))
 
             episode_reward += reward
             # Optimize the model
@@ -159,8 +158,8 @@ def train_dqn_agent(map_fp,
             #soft_update(dqn_agent.target_network, dqn_agent.main_network, tau=0.005)
             
             if steps_done % 100 == 0:
-                soft_update(dqn_agent.target_network, dqn_agent.main_network, tau=0.005)
-                print(f"Target network updated at step {steps_done}")
+                dqn_agent.target_network.load_state_dict(dqn_agent.main_network.state_dict())
+            
             steps_done += 1
             episode_step += 1
 
@@ -188,5 +187,5 @@ if __name__ == "__main__":
                     no_gui=False, 
                     target_fps=30, 
                     random_seed=42, 
-                    draw=True, 
+                    draw=False, 
                     episodes= 2000)

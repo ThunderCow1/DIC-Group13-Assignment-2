@@ -69,11 +69,6 @@ class Environment:
         direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x,y])
         angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
         angle_diff = (angle_to_target - self.robot.orientation + 540) % 360 - 180
-        state =[x, 
-                y,
-                target_x,
-                target_y]
-        state.extend(distances)
         
         action_list = agent.select_action(x, 
                                           y, 
@@ -86,6 +81,12 @@ class Environment:
         old_pos = self.robot.position
         self.robot.take_action(action_list)
         new_pos = self.robot.position
+
+        distances = self.robot.gain_sensor_output(self.obstacle_mask, get_directions=False)
+        x, y = new_pos
+        dx = (target_x - x) / 1000.0
+        dy = (target_y - y) / 1000.0
+        state = [dx, dy, angle_diff] + distances
 
         collision = check_collision(new_pos, self.robot.size, self.obstacle_mask)
         target_reached = self.check_target(new_pos, self.robot.size)
@@ -125,9 +126,9 @@ class Environment:
         if not collision and not target_reached:
             r -= 0.01
         elif collision:
-            r -= 20
+            r -= 2.5
         elif target_reached:
-            r += 100
+            r += 10
 
         r += 0.01 * (np.linalg.norm(np.array(self.map.current_target) - np.array(old_pos))
                       - np.linalg.norm(np.array(self.map.current_target) - np.array(new_pos)))

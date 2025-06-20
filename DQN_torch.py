@@ -26,8 +26,8 @@ class DQN():
                         'move_left',
                         'move_right']
         self.action_size = len(self.actions)
-        self.main_network = NN(input_dim=17, output_dim=4)
-        self.target_network = NN(input_dim=17, output_dim=4)
+        self.main_network = NN(input_dim=16, output_dim=4)
+        self.target_network = NN(input_dim=16, output_dim=4)
         self.epsilon = epsilon
         
     def select_action(self, x,y, 
@@ -37,16 +37,16 @@ class DQN():
                       target_y, 
                       angle_diff, 
                       distances):
-        distance = np.linalg.norm(np.array([target_x, target_y]) - np.array([x, y]))
-        state = np.array([x, y, target_x, target_y] + list(distances))
+        dx = (target_x - x) / 1000.0
+        dy = (target_y - y) / 1000.0
+        state = np.array([dx, dy, angle_diff] + list(distances))
         if np.random.rand()< self.epsilon:
             return [self.actions[random.randint(0, self.action_size - 1)]]
         state = torch.Tensor(state)
         with torch.no_grad():
             q_values = self.main_network.forward(state.reshape(1, -1))
-        r = torch.argmax(q_values[0])
-        return [self.actions[r]]
-    
+        return [self.actions[q_values.argmax().item()]]
+
     def _update(self,reward, old_pos, action_list):
         pass
 

@@ -21,6 +21,7 @@ class IntuitiveAgent:
     def select_action(self, x, y, robot_orientation,
                       robot_speed, target_x, target_y,
                       angle_diff, distances:  list):
+        print("length of distances:", len(distances))
         
         action_list = []
         

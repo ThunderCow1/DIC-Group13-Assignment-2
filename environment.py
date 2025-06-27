@@ -16,6 +16,7 @@ from human_agent import HumanAgent
 from intuitive_agent import IntuitiveAgent
 from helper_functions import check_collision
 from npc import NPC
+from PPO_agent import PPOAgent
 
 class Environment:
     def __init__(self,
@@ -97,6 +98,8 @@ class Environment:
         if target_reached:
             self.map.update_target()
 
+        #reward = self.reward_function(new_pos, old_pos, collision, target_reached)
+
         if collision:
             self.robot.speed = 0
         else:
@@ -110,6 +113,7 @@ class Environment:
             else:
                 npc.position = new_pos
 
+        reward = self.reward_function(collision, target_reached, old_pos, new_pos)
         reward = self.reward_function(collision, target_reached, old_pos, new_pos)
 
         self.cum_reward += reward
@@ -182,12 +186,13 @@ class Environment:
 
 if __name__ == "__main__":
     pygame.init()
-    env = Environment("map1.json", agent_start_pos = (50,50), draw = True)
+    env = Environment("map2.json", agent_start_pos = (50,50), draw = True)
     # env.npcs.append(NPC((700,500),3,15,0.01))
     fpss = []
     typerun = True
 
     agent = IntuitiveAgent(env.robot)
+    #agent = PPOAgent(env.robot)
     clock = pygame.time.Clock()
     i = 0
     while typerun == True:
@@ -202,4 +207,16 @@ if __name__ == "__main__":
             env.reset(agent_start_pos=(50,50))
         clock.tick()
         fpss.append(clock.get_fps())
+
+        # PPO training 
+        if is_ppo:
+            num_steps += 1
+            if num_steps >= max_steps:
+                print(f"[Episode {episode}] Training PPOAgent, cum. reward: {round(env.cum_reward, 2)}")
+                agent.train()
+
+                # Reset environment state
+                env.cum_reward = 0
+                num_steps = 0
+                episode += 1
 

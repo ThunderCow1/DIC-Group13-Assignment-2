@@ -1,1 +1,21 @@
-{"0": {"mean_cum_reward": 129.59514624082436}, "1": {"mean_cum_reward": 57.07343340139882}, "2": {"mean_cum_reward": 60.94705503791543}, "3": {"mean_cum_reward": 83.90589401034572}, "4": {"mean_cum_reward": 107.18342051707523}, "5": {"mean_cum_reward": 214.07518674745182}, "6": {"mean_cum_reward": 110.46839478070493}, "7": {"mean_cum_reward": 118.90664422366721}, "8": {"mean_cum_reward": 126.85353773957289}, "9": {"mean_cum_reward": 131.40908815958136}, "10": {"mean_cum_reward": 128.04712936792248}, "11": {"mean_cum_reward": 73.93625735863823}, "12": {"mean_cum_reward": 87.41426229624143}, "13": {"mean_cum_reward": 68.89288545590743}, "14": {"mean_cum_reward": 58.7855329393142}, "15": {"mean_cum_reward": 56.10746827501191}, "16": {"mean_cum_reward": 144.18919255773557}, "17": {"mean_cum_reward": 131.7346915320348}, "18": {"mean_cum_reward": 90.86219031050025}, "19": {"mean_cum_reward": 130.71782065523237}, "20": {"mean_cum_reward": 74.9841845706693}, "21": {"mean_cum_reward": 96.633271770341}, "22": {"mean_cum_reward": 105.65064596708596}, "23": {"mean_cum_reward": 64.62840206585285}, "24": {"mean_cum_reward": 68.26718312742011}, "25": {"mean_cum_reward": 79.31284903881965}, "26": {"mean_cum_reward": 128.46527237082475}, "27": {"mean_cum_reward": 103.72458982736312}, "28": {"mean_cum_reward": 89.88753917704626}, "29": {"mean_cum_reward": -32.091143314298215}, "30": {"mean_cum_reward": 58.598003969368236}, "31": {"mean_cum_reward": 165.01369402476024}, "32": {"mean_cum_reward": 57.058715356040764}, "33": {"mean_cum_reward": 43.412484468365996}, "34": {"mean_cum_reward": 104.2918541844278}, "35": {"mean_cum_reward": 32.62640308400314}, "36": {"mean_cum_reward": 71.21023751520984}, "37": {"mean_cum_reward": 157.2496335828639}, "38": {"mean_cum_reward": 97.36255587283233}, "39": {"mean_cum_reward": 135.11637174778932}, "40": {"mean_cum_reward": 126.43802205875431}, "41": {"mean_cum_reward": 109.905075807672}, "42": {"mean_cum_reward": 96.65925623304352}, "43": {"mean_cum_reward": 99.2654092695921}, "44": {"mean_cum_reward": 93.15863161612629}, "45": {"mean_cum_reward": 118.59130664308586}, "46": {"mean_cum_reward": 104.90898226775684}, "47": {"mean_cum_reward": 100.04762265270719}, "48": {"mean_cum_reward": 41.35577972928678}, "49": {"mean_cum_reward": 187.00153048020377}}
+{"0": 
+{"mean_cum_rewards": -110.0192356098095}, 
+"1": {"mean_cum_rewards": -115.02875865999958}, 
+"2": {"mean_cum_rewards": -74.73301849806217}, 
+"3": {"mean_cum_rewards": -51.77625867793434}, 
+"4": {"mean_cum_rewards": 20.49851714160886}, 
+"5": {"mean_cum_rewards": 2.299689354643263}, 
+"6": {"mean_cum_rewards": 125.17913930286696}, 
+"7": {"mean_cum_rewards": -105.96896150688478}, 
+"8": {"mean_cum_rewards": 7.596232565101356}, 
+"9": {"mean_cum_rewards": 49.82538941178384}, 
+"10": {"mean_cum_rewards": -24.69182822471321}, 
+"11": {"mean_cum_rewards": 64.37464250715085}, 
+"12": {"mean_cum_rewards": -62.64544864098964},
+ "13": {"mean_cum_rewards": -64.23243991114487}, 
+ "14": {"mean_cum_rewards": -65.71191987402707}, 
+ "15": {"mean_cum_rewards": 53.286270827052725}, 
+ "16": {"mean_cum_rewards": -37.20244735254791},
+"17": {"mean_cum_rewards": -12.88506136917617}, 
+"18": {"mean_cum_rewards": 175.11463087076362}, 
+"19": {"mean_cum_rewards": 152.61155461320365}}

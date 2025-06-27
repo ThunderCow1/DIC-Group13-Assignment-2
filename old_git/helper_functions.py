@@ -24,20 +24,18 @@ def check_collision(new_pos, robot_radius, object_mask):
 
 def action_to_index(action):
     action_map = {
-        "turn_right": 0,
-        "turn_left": 1,
-        "accelerate": 2,
-        "break": 3,
-        "break_hard": 4
+        "move_up": 0,
+        "move_down": 1,
+        "move_left": 2,
+        "move_right": 3
     }
     return action_map.get(action, -1)
 
 def index_to_action(index):
     action_map = {
-        0: "turn_right",
-        1: "turn_left",
-        2: "accelerate",
-        3: "break",
-        4: "break_hard"
+        0: "move_up",
+        1: "move_down",
+        2: "move_left",
+        3: "move_right"
     }
     return action_map.get(index, None)

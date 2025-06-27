@@ -98,6 +98,7 @@ class Map:
         
         mask = self.create_obstacle_mask()
         i = 0
+        margin=15 # Robot size buffer
         while i < 1000:
             i += 1
             x, y = random.uniform(0, self.map_size[0]), random.uniform(0, self.map_size[1])

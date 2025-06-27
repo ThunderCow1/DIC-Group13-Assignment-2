@@ -10,12 +10,13 @@ from warnings import warn
 from time import time, sleep
 from datetime import datetime
 from map import Map
-from robot import Robot
+from robot2 import Robot
 from random_agent import RandomAgent
 from human_agent import HumanAgent
 from intuitive_agent import IntuitiveAgent
 from helper_functions import check_collision
 from npc import NPC
+from PPO_agent import PPOAgent
 
 class Environment:
     def __init__(self,
@@ -69,14 +70,6 @@ class Environment:
         direction_vec = pygame.Vector2([target_x, target_y]) - pygame.Vector2([x,y])
         angle_to_target = math.degrees(math.atan2(direction_vec.y, direction_vec.x)) % 360
         angle_diff = (angle_to_target - self.robot.orientation + 540) % 360 - 180
-        state =[x, 
-                y, 
-                self.robot.orientation,
-                self.robot.speed,
-                target_x, 
-                target_y,
-                angle_diff]
-        state.extend(distances)
         
         action_list = agent.select_action(x, 
                                           y, 
@@ -86,10 +79,15 @@ class Environment:
                                           target_y,
                                           angle_diff,
                                           distances)
-
-        self.robot.take_action(action_list)
         old_pos = self.robot.position
-        new_pos = self.robot._update()
+        self.robot.take_action(action_list)
+        new_pos = self.robot.position
+
+        distances = self.robot.gain_sensor_output(self.obstacle_mask, get_directions=False)
+        x, y = new_pos
+        dx = (target_x - x) / 1000.0
+        dy = (target_y - y) / 1000.0
+        state = [dx, dy, angle_diff] + distances
 
         collision = check_collision(new_pos, self.robot.size, self.obstacle_mask)
         target_reached = self.check_target(new_pos, self.robot.size)
@@ -99,6 +97,8 @@ class Environment:
         
         if target_reached:
             self.map.update_target()
+
+        #reward = self.reward_function(new_pos, old_pos, collision, target_reached)
 
         if collision:
             self.robot.speed = 0
@@ -113,6 +113,7 @@ class Environment:
             else:
                 npc.position = new_pos
 
+        reward = self.reward_function(collision, target_reached, old_pos, new_pos)
         reward = self.reward_function(collision, target_reached, old_pos, new_pos)
 
         self.cum_reward += reward
@@ -129,13 +130,12 @@ class Environment:
         if not collision and not target_reached:
             r -= 0.01
         elif collision:
-            r -= 20
+            r -= 2.5
         elif target_reached:
-            r += 100
+            r += 10
 
         r += 0.01 * (np.linalg.norm(np.array(self.map.current_target) - np.array(old_pos))
                       - np.linalg.norm(np.array(self.map.current_target) - np.array(new_pos)))
-        
         return r
 
     def check_target(self, new_pos, robot_radius):
@@ -186,12 +186,13 @@ class Environment:
 
 if __name__ == "__main__":
     pygame.init()
-    env = Environment("map1.json", agent_start_pos = (50,50), draw = True)
+    env = Environment("map2.json", agent_start_pos = (50,50), draw = True)
     # env.npcs.append(NPC((700,500),3,15,0.01))
     fpss = []
     typerun = True
 
     agent = IntuitiveAgent(env.robot)
+    #agent = PPOAgent(env.robot)
     clock = pygame.time.Clock()
     i = 0
     while typerun == True:
@@ -206,4 +207,16 @@ if __name__ == "__main__":
             env.reset(agent_start_pos=(50,50))
         clock.tick()
         fpss.append(clock.get_fps())
+
+        # PPO training 
+        if is_ppo:
+            num_steps += 1
+            if num_steps >= max_steps:
+                print(f"[Episode {episode}] Training PPOAgent, cum. reward: {round(env.cum_reward, 2)}")
+                agent.train()
+
+                # Reset environment state
+                env.cum_reward = 0
+                num_steps = 0
+                episode += 1
 

@@ -23,6 +23,7 @@ class RandomAgent:
                       angle_diff, distances:  list):
         
         action_list = []
+        print("length of distances:", len(distances))
 
         for action in self.actions:
             if random.random() > 0.5:

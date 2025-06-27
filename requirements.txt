@@ -1,0 +1,8 @@
+torch
+numpy
+pygame
+tqdm
+matplotlib
+scikit-learn
+
+

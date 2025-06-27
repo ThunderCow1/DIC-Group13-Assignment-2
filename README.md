@@ -1,6 +1,6 @@
 # DIC Group 13 Assignment 2: Continuous Environment RL Agents
 
-This project implements and evaluates reinforcement learning agents (DQN, PPO), as well as human and intuitive agents, in a continuous 2D environment for the Data Intelligence Challenge.
+This project implements and evaluates reinforcement learning agents (DQN, PPO) in a continuous 2D environment for the Data Intelligence Challenge.
 
 ## Project Structure
 
@@ -27,7 +27,7 @@ This project implements and evaluates reinforcement learning agents (DQN, PPO), 
 Install dependencies with:
 
 ```sh
-pip install torch numpy pygame tqdm
+pip install -r requirements.txt
 ```
 
 ## Usage
@@ -41,7 +41,7 @@ python evaluate.py maps/map1.json --agent DQN --train 2500 --evaluation 10 --Ste
 ```
 
 **Arguments:**
-- `MAP`: Path to the map JSON file (e.g., `maps/map2.json`)
+- `MAP`: Path to the map JSON file (e.g., `maps\map2.json`)
 - `--agent`: Agent type (`human`, `intuitive`, `DQN`, `PPO`)
 - `--train`: Number of training iterations (default: 2500)
 - `--evaluation`: Number of evaluation episodes (default: 10)
@@ -52,7 +52,7 @@ python evaluate.py maps/map1.json --agent DQN --train 2500 --evaluation 10 --Ste
 ### Example: PPO Agent
 
 ```sh
-python evaluate.py maps/map2.json --agent PPO --train 2500 --evaluation 10 --Steps 1000 --Draw True --val_times 50
+python evaluate.py maps\map2.json --agent PPO --train 2500 --evaluation 10 --Steps 1000 --Draw True --val_times 50
 ```
 
 ### Human/Intuitive Agent
@@ -60,7 +60,7 @@ python evaluate.py maps/map2.json --agent PPO --train 2500 --evaluation 10 --Ste
 For manual or intuitive agent control:
 
 ```sh
-python evaluate.py maps/map2.json --agent DQN
+python evaluate.py maps/map2.json --agent intuitive
 ```
 
 ## Output
@@ -82,7 +82,7 @@ python evaluate.py maps/map2.json --agent DQN
 Use the plotting scripts to visualize mean cumulative rewards:
 
 ```sh
-python plot_mean_cum_rewards.py
+python plot_rewards.py
 ```
 
 ## License
